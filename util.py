@@ -1,11 +1,13 @@
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 from functools import partial
-from typing import Callable, List
+from typing import Any, Callable, Dict, List
 
+from fastapi import HTTPException, status
 from nba_api.stats.endpoints.commonplayerinfo import CommonPlayerInfo
+from nba_api.stats.endpoints.commonteamroster import CommonTeamRoster
 from nba_api.stats.static.players import get_active_players
-from nba_api.stats.static.teams import get_teams
+from nba_api.stats.static.teams import _find_team_name_by_id, get_teams
 
 from players.player_summary import PlayerSummary
 
@@ -58,3 +60,49 @@ async def get_player_info(player_id: int) -> PlayerSummary:
 
     except Exception:
         return PlayerSummary()
+
+
+async def get_all_team_players(team_id: int) -> List[PlayerSummary]:
+    team_data: Any = _find_team_name_by_id(team_id=team_id)
+
+    if team_data is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"The ID {team_id} is not a valid team ID",
+        )
+
+    loop = asyncio.get_running_loop()
+
+    team_roster: CommonTeamRoster = CommonTeamRoster(team_id=team_id)
+    roster_response: Dict = await loop.run_in_executor(
+        executor, lambda: team_roster.common_team_roster.get_dict()
+    )
+
+    roster_data = roster_response["data"]
+
+    async def create_player_summary(player_data: list) -> PlayerSummary:
+        full_name = player_data[3]
+        name_parts = full_name.split(" ", 1)
+        first_name = name_parts[0]
+        last_name = name_parts[1] if len(name_parts) > 1 else ""
+
+        return PlayerSummary(
+            player_id=player_data[14],
+            first_name=first_name,
+            last_name=last_name,
+            birth_date=player_data[10],
+            height=player_data[8],
+            weight=player_data[9],
+            season_exp=0 if player_data[12] == "R" else int(player_data[12]),
+            jersey=player_data[2],
+            position=player_data[7],
+            team_id=player_data[0],
+            team_city=team_data["city"],
+            team_name=team_data["nickname"],
+        )
+
+    player_summaries = await asyncio.gather(
+        *(create_player_summary(player) for player in roster_data)
+    )
+
+    return player_summaries

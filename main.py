@@ -7,7 +7,12 @@ from fastapi import FastAPI, HTTPException, status
 from players.player_summary import PlayerSummary
 from players.player_summary_response import PlayerSummaryResponse
 from teams.team import Team
-from util import get_all_player_ids, get_all_team_data, get_player_info
+from util import (
+    get_all_player_ids,
+    get_all_team_data,
+    get_all_team_players,
+    get_player_info,
+)
 
 app = FastAPI()
 
@@ -79,7 +84,6 @@ async def get_all_players(page: int = 1, players_per_page: int = 10) -> Dict[str
 
 @app.get("/players/{player_id}", response_model=PlayerSummary)
 async def get_player_by_id(player_id: int) -> PlayerSummary:
-
     try:
         try:
             player = await asyncio.wait_for(get_player_info(player_id), timeout=10.0)
@@ -108,14 +112,12 @@ async def get_player_by_id(player_id: int) -> PlayerSummary:
 
 
 @app.get("/teams", response_model=List[Team])
-async def get_all_teams():
+async def get_all_teams() -> List[Team]:
     try:
-        print("Method called...")
         teams_data: List[dict] = await get_all_team_data()
         print(teams_data)
         teams: List[Team] = []
 
-        print("Starting to print teams...")
         for data in teams_data:
             team: Team = Team(
                 team_id=data["id"],
@@ -125,10 +127,14 @@ async def get_all_teams():
                 city=data["city"],
             )
             teams.append(team)
-        print("End of the loop...")
         return teams
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"An unexpected error occurred: {str(e)}",
         )
+
+
+@app.get("/teams/{team_id}/players", response_model=List[PlayerSummary])
+async def get_players_by_team(team_id: int) -> List[PlayerSummary]:
+    return await get_all_team_players(team_id)

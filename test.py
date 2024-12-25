@@ -1,9 +1,8 @@
-from typing import List
+from nba_api.stats.endpoints.commonteamroster import CommonTeamRoster
+from nba_api.stats.static.teams import _find_team_name_by_id
 
-from nba_api.stats.endpoints.commonplayerinfo import CommonPlayerInfo
-from nba_api.stats.static.players import get_active_players
-from nba_api.stats.static.teams import get_teams
+team_roster: CommonTeamRoster = CommonTeamRoster(1610612739)
+print(team_roster.common_team_roster.get_dict()["data"])
 
-teams: list = get_teams()
-for team in teams:
-    print(team)
+team = _find_team_name_by_id(1610612739)
+print(team)

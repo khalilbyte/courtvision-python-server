@@ -1,5 +1,5 @@
 from test.all_teams_data import MOCK_TEAMS
-from typing import Dict, List
+from typing import List
 from unittest.mock import patch
 
 import pytest
