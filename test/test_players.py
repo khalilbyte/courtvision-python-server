@@ -89,9 +89,9 @@ async def test_get_all_players(
         assert players[1]["first_name"] == "Steven"
         assert players[1]["last_name"] == "Adams"
 
-        assert data["currentPage"] == 1
-        assert data["previousPage"] is None
-        assert data["nextPage"] is None
+        assert data["current_page"] == 1
+        assert data["previous_page"] is None
+        assert data["next_page"] is None
         assert data["is_last_page"]
         assert len(data["players"]) == 2
 
@@ -110,9 +110,9 @@ async def test_all_players_invalid_parameters(
         assert response.status_code == 200
         data: Dict[str, Any] = response.json()
 
-        assert data["currentPage"] == 1
-        assert data["previousPage"] is None
-        assert data["nextPage"] is None
+        assert data["current_page"] == 1
+        assert data["previous_page"] is None
+        assert data["next_page"] is None
         assert data["is_last_page"]
         assert len(data["players"]) == 2
 
@@ -132,7 +132,7 @@ async def test_min_players_per_page(
         data: Dict[str, Any] = response.json()
 
         assert len(data["players"]) == 1
-        assert data["totalPlayers"] == len(MOCK_PLAYER_IDS)
+        assert data["total_players"] == len(MOCK_PLAYER_IDS)
         assert not data["is_last_page"]
 
 
@@ -168,9 +168,9 @@ async def test_last_page_indicators(
         assert response.status_code == 200
         data: Dict[str, Any] = response.json()
 
-        assert data["currentPage"] == 2
-        assert data["previousPage"] == 1
-        assert data["nextPage"] is None
+        assert data["current_page"] == 2
+        assert data["previous_page"] == 1
+        assert data["next_page"] is None
         assert data["is_last_page"]
 
 

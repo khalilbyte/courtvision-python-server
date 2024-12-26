@@ -3,6 +3,7 @@ from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 from typing import Any, Callable, Dict, List
 
+from dateutil import parser
 from fastapi import HTTPException, status
 from nba_api.stats.endpoints.commonplayerinfo import CommonPlayerInfo
 from nba_api.stats.endpoints.commonteamroster import CommonTeamRoster
@@ -90,7 +91,7 @@ async def get_all_team_players(team_id: int) -> List[PlayerSummary]:
             player_id=player_data[14],
             first_name=first_name,
             last_name=last_name,
-            birth_date=player_data[10],
+            birth_date=parser.parse(player_data[10]).strftime("%Y-%m-%dT%H:%M:%S"),
             height=player_data[8],
             weight=player_data[9],
             season_exp=0 if player_data[12] == "R" else int(player_data[12]),

@@ -22,7 +22,6 @@ async def get_all_players(page: int = 1, players_per_page: int = 10) -> Dict[str
     MAX_PLAYERS_PER_PAGE: int = 50
     MIN_PLAYERS_PER_PAGE: int = 1
     MIN_PAGE: int = 1
-    MAX_PAGE: int = 615
 
     if (
         players_per_page < MIN_PLAYERS_PER_PAGE
@@ -30,10 +29,6 @@ async def get_all_players(page: int = 1, players_per_page: int = 10) -> Dict[str
     ):
         players_per_page = 10  # Reset to default if outside valid range
 
-    if page < MIN_PAGE or page > MAX_PAGE:
-        page = 1  # Reset to first page if outside valid range
-
-    # Get our player data with timeout protection
     try:
         player_ids: List[int] = await asyncio.wait_for(
             get_all_player_ids(), timeout=10.0
@@ -43,6 +38,11 @@ async def get_all_players(page: int = 1, players_per_page: int = 10) -> Dict[str
             status_code=status.HTTP_504_GATEWAY_TIMEOUT,
             detail="Failed to retrieve player IDs within timeout period",
         )
+
+    MAX_PAGE: int = ceil(len(player_ids) / players_per_page)
+
+    if page < MIN_PAGE or page > MAX_PAGE:
+        page = 1  # Reset to first page if outside valid range
 
     total_players: int = len(player_ids)
     total_pages: int = ceil(total_players / players_per_page)
@@ -74,11 +74,11 @@ async def get_all_players(page: int = 1, players_per_page: int = 10) -> Dict[str
     # Construct the final response with all our validated and calculated data
     return PlayerSummaryResponse(
         players=players,
-        currentPage=page,
-        nextPage=next_page,
-        previousPage=previous_page,
+        current_page=page,
+        next_page=next_page,
+        previous_page=previous_page,
         is_last_page=is_last_page,
-        totalPlayers=total_players,
+        total_players=total_players,
     )
 
 
