@@ -23,22 +23,7 @@ def mock_get_all_team_data():
     return _mock_get_all_team_data
 
 
-@pytest.mark.asyncio
-async def test_get_all_teams(client: TestClient, mock_get_all_team_data) -> None:
-    with patch("main.get_all_team_data", new=mock_get_all_team_data):
-        response: Response = client.get("/teams")
-
-        assert response.status_code == 200
-        teams: List[dict] = response.json()
-
-        assert len(teams) == 30
-        assert teams[0]["team_id"] is not None
-        assert teams[1]["team_id"] is not None
-        assert teams[2]["team_id"] is not None
-        assert teams[3]["team_id"] is not None
-        assert teams[4]["team_id"] is not None
-
-
+# /teams/{team_id}/players endpoint tests
 @pytest.mark.asyncio
 async def test_get_players_by_team(client: TestClient) -> None:
     MOCK_PLAYER_DATA = [
@@ -61,7 +46,7 @@ async def test_get_players_by_team(client: TestClient) -> None:
     async def mock_get_all_team_players(team_id: int) -> List[PlayerSummary]:
         return [PlayerSummary(**player) for player in MOCK_PLAYER_DATA]
 
-    with patch("main.get_all_team_players", new=mock_get_all_team_players):
+    with patch("main.get_team_players", new=mock_get_all_team_players):
         response: Response = client.get(f"/teams/1610612747/players")
 
         assert response.status_code == 200
@@ -75,3 +60,20 @@ async def test_get_players_by_team(client: TestClient) -> None:
         assert player["team_id"] == 1610612747
         assert player["team_city"] == "Los Angeles"
         assert player["team_name"] == "Lakers"
+
+
+# /teams endpoint tests
+@pytest.mark.asyncio
+async def test_get_all_teams(client: TestClient, mock_get_all_team_data) -> None:
+    with patch("teams.team_service.get_all_team_data", new=mock_get_all_team_data):
+        response: Response = client.get("/teams")
+
+        assert response.status_code == 200
+        teams: List[dict] = response.json()
+
+        assert len(teams) == 30
+        assert teams[0]["team_id"] is not None
+        assert teams[1]["team_id"] is not None
+        assert teams[2]["team_id"] is not None
+        assert teams[3]["team_id"] is not None
+        assert teams[4]["team_id"] is not None

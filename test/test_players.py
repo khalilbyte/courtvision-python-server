@@ -66,13 +66,77 @@ def mock_get_all_player_ids():
     return _mock_get_all_player_ids
 
 
+# /players/search endpoint tests
+@pytest.mark.asyncio
+async def test_get_players_by_search(client: TestClient, mock_get_player_info) -> None:
+    search_keyword = "Precious"
+
+    async def mock_search_players(keyword: str) -> List[PlayerSummary]:
+        matching_players = []
+        keyword = keyword.lower()
+
+        for player in MOCK_PLAYERS:
+            first_name = player.first_name.lower()
+            last_name = player.last_name.lower()
+
+            if keyword in first_name or keyword in last_name:
+                matching_players.append(player)
+
+        return matching_players
+
+    with patch(
+        "players.player_service.create_player_summary_from_search_result",
+        new=mock_search_players,
+    ):
+        response: Response = client.get(
+            f"/players/search", params={"keyword": search_keyword}
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+
+        assert len(data) == 1
+        assert data[0]["player_id"] == 1630173
+        assert data[0]["first_name"] == "Precious"
+        assert data[0]["last_name"] == "Achiuwa"
+
+
+# /players/{player_id} endpoint tests
+@pytest.mark.asyncio
+async def test_get_player_by_id(client: TestClient, mock_get_player_info) -> None:
+    with patch("players.player_service.get_player_info", new=mock_get_player_info):
+        response: Response = client.get("/players/1630173")
+
+        assert response.status_code == 200
+        data = response.json()
+
+        assert data["player_id"] == 1630173
+        assert data["first_name"] == "Precious"
+        assert data["last_name"] == "Achiuwa"
+        assert data["team_city"] == "New York"
+        assert data["team_name"] == "Knicks"
+
+
+@pytest.mark.asyncio
+async def test_get_player_by_id_not_found(
+    client: TestClient, mock_get_player_info
+) -> None:
+    with patch("players.player_service.get_player_info", new=mock_get_player_info):
+        response: Response = client.get("/players/99999")
+
+        assert response.status_code == 404
+        data = response.json()
+        assert "not found" in data["detail"].lower()
+
+
+# /players endpoint tests
 @pytest.mark.asyncio
 async def test_get_all_players(
     client: TestClient, mock_get_all_player_ids, mock_get_player_info
 ) -> None:
-    with patch("main.get_all_player_ids", new=mock_get_all_player_ids), patch(
-        "main.get_player_info", new=mock_get_player_info
-    ):
+    with patch(
+        "players.player_service.get_all_player_ids", new=mock_get_all_player_ids
+    ), patch("players.player_service.get_player_info", new=mock_get_player_info):
         response: Response = client.get(
             "/players", params={"page": 1, "players_per_page": 2}
         )
@@ -100,9 +164,9 @@ async def test_get_all_players(
 async def test_all_players_invalid_parameters(
     client: TestClient, mock_get_all_player_ids, mock_get_player_info
 ) -> None:
-    with patch("main.get_all_player_ids", new=mock_get_all_player_ids), patch(
-        "main.get_player_info", new=mock_get_player_info
-    ):
+    with patch(
+        "players.player_service.get_all_player_ids", new=mock_get_all_player_ids
+    ), patch("players.player_service.get_player_info", new=mock_get_player_info):
         response: Response = client.get(
             "/players", params={"page": 15, "players_per_page": 9999}
         )
@@ -121,9 +185,9 @@ async def test_all_players_invalid_parameters(
 async def test_min_players_per_page(
     client: TestClient, mock_get_all_player_ids, mock_get_player_info
 ) -> None:
-    with patch("main.get_all_player_ids", new=mock_get_all_player_ids), patch(
-        "main.get_player_info", new=mock_get_player_info
-    ):
+    with patch(
+        "players.player_service.get_all_player_ids", new=mock_get_all_player_ids
+    ), patch("players.player_service.get_player_info", new=mock_get_player_info):
         response: Response = client.get(
             "/players", params={"page": 1, "players_per_page": 1}
         )
@@ -140,9 +204,9 @@ async def test_min_players_per_page(
 async def test_exact_max_players_per_page(
     client: TestClient, mock_get_all_player_ids, mock_get_player_info
 ) -> None:
-    with patch("main.get_all_player_ids", new=mock_get_all_player_ids), patch(
-        "main.get_player_info", new=mock_get_player_info
-    ):
+    with patch(
+        "players.player_service.get_all_player_ids", new=mock_get_all_player_ids
+    ), patch("players.player_service.get_player_info", new=mock_get_player_info):
         response: Response = client.get(
             "/players", params={"page": 1, "players_per_page": 50}
         )
@@ -158,9 +222,9 @@ async def test_exact_max_players_per_page(
 async def test_last_page_indicators(
     client: TestClient, mock_get_all_player_ids, mock_get_player_info
 ) -> None:
-    with patch("main.get_all_player_ids", new=mock_get_all_player_ids), patch(
-        "main.get_player_info", new=mock_get_player_info
-    ):
+    with patch(
+        "players.player_service.get_all_player_ids", new=mock_get_all_player_ids
+    ), patch("players.player_service.get_player_info", new=mock_get_player_info):
         response: Response = client.get(
             "/players", params={"page": 2, "players_per_page": 1}
         )
@@ -172,31 +236,3 @@ async def test_last_page_indicators(
         assert data["previous_page"] == 1
         assert data["next_page"] is None
         assert data["is_last_page"]
-
-
-@pytest.mark.asyncio
-async def test_get_player_by_id(client: TestClient, mock_get_player_info) -> None:
-    with patch("main.get_player_info", new=mock_get_player_info):
-        response: Response = client.get("/players/1630173")
-
-        assert response.status_code == 200
-        data = response.json()
-
-        # Verify the player data matches our mock
-        assert data["player_id"] == 1630173
-        assert data["first_name"] == "Precious"
-        assert data["last_name"] == "Achiuwa"
-        assert data["team_city"] == "New York"
-        assert data["team_name"] == "Knicks"
-
-
-@pytest.mark.asyncio
-async def test_get_player_by_id_not_found(
-    client: TestClient, mock_get_player_info
-) -> None:
-    with patch("main.get_player_info", new=mock_get_player_info):
-        response: Response = client.get("/players/99999")
-
-        assert response.status_code == 404
-        data = response.json()
-        assert "not found" in data["detail"].lower()
