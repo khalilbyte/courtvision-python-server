@@ -2,8 +2,10 @@ from typing import Any, Dict, List
 
 from fastapi import FastAPI, Query
 
+from categories import Category
 from players.player_service import (
     create_player_summary_from_search_result,
+    get_leaders,
     get_paginated_players,
     get_player,
 )
@@ -13,6 +15,13 @@ from teams.team import Team
 from teams.team_service import get_all_teams, get_team_players
 
 app = FastAPI()
+
+
+@app.get("/players/categories", response_model=List[List])
+async def get_category_leaders(
+    number_of_players: int, category: Category
+) -> List[List]:
+    return await get_leaders(number_of_players=number_of_players, category=category)
 
 
 @app.get("/players/search", response_model=List[PlayerSummary])

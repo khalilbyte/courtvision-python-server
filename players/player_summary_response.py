@@ -7,8 +7,8 @@ from players.player_summary import PlayerSummary
 
 class PlayerSummaryResponse(BaseModel):
     players: List[PlayerSummary]
-    current_page: int
+    current_page: int = 0
     next_page: Optional[int]
     previous_page: Optional[int]
     is_last_page: bool
-    total_players: int
+    total_players: int = 0

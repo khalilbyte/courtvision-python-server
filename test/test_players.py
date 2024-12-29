@@ -5,6 +5,7 @@ import pytest
 from fastapi import Response
 from fastapi.testclient import TestClient
 
+from categories import Category
 from main import app
 from players.player_summary import PlayerSummary
 
@@ -66,28 +67,118 @@ def mock_get_all_player_ids():
     return _mock_get_all_player_ids
 
 
+@pytest.fixture
+def mock_get_leaders():
+    async def _mock_get_leaders(
+        number_of_players: int, category: Category
+    ) -> List[List]:
+        MOCK_PLAYERS: List[List] = [
+            [
+                203507,
+                1,
+                "Giannis Antetokounmpo",
+                1610612749,
+                "MIL",
+                24,
+                35.0,
+                12.8,
+                20.9,
+                0.613,
+                0.2,
+                0.8,
+                0.222,
+                7.0,
+                11.3,
+                0.614,
+                2.0,
+                9.6,
+                11.6,
+                6.0,
+                0.7,
+                1.5,
+                3.4,
+                32.7,
+                36.6,
+            ],
+            [
+                1628983,
+                2,
+                "Shai Gilgeous-Alexander",
+                1610612760,
+                "OKC",
+                30,
+                34.7,
+                10.8,
+                21.0,
+                0.517,
+                2.2,
+                6.2,
+                0.348,
+                7.0,
+                8.0,
+                0.879,
+                0.9,
+                4.7,
+                5.6,
+                6.1,
+                2.0,
+                1.1,
+                2.7,
+                30.8,
+                31.8,
+            ],
+        ]
+        return MOCK_PLAYERS
+
+    return _mock_get_leaders
+
+
+# /players/categories endpoint tests
+@pytest.mark.asyncio
+async def test_get_leaders(client: TestClient, mock_get_leaders) -> None:
+    number_of_players: int = 2
+    category: Category = Category.points
+
+    with patch(
+        "players.player_service.get_leaders",
+        new=mock_get_leaders,
+    ):
+        response: Response = client.get(
+            f"/players/categories",
+            params={"number_of_players": number_of_players, "category": category.value},
+        )
+
+        assert response.status_code == 200
+        mock_response = await mock_get_leaders(number_of_players, category)
+        data = response.json()
+
+        assert len(data) == len(mock_response)
+        assert data[0][0] == mock_response[0][0]
+        assert data[0][1] == mock_response[0][1]
+        assert data[0][2] == mock_response[0][2]
+        assert data[1][0] == mock_response[1][0]
+        assert data[1][1] == mock_response[1][1]
+        assert data[1][2] == mock_response[1][2]
+
+
 # /players/search endpoint tests
 @pytest.mark.asyncio
 async def test_get_players_by_search(client: TestClient, mock_get_player_info) -> None:
     search_keyword = "Precious"
 
-    async def mock_search_players(keyword: str) -> List[PlayerSummary]:
-        matching_players = []
-        keyword = keyword.lower()
-
-        for player in MOCK_PLAYERS:
-            first_name = player.first_name.lower()
-            last_name = player.last_name.lower()
-
-            if keyword in first_name or keyword in last_name:
-                matching_players.append(player)
-
-        return matching_players
+    mock_search_result = [
+        {
+            "id": 1630173,
+            "first_name": "Precious",
+            "last_name": "Achiuwa",
+            "is_active": True,
+        }
+    ]
 
     with patch(
-        "players.player_service.create_player_summary_from_search_result",
-        new=mock_search_players,
-    ):
+        "players.player_service.search_players", return_value=mock_search_result
+    ), patch("players.player_service.get_player_info", new=mock_get_player_info):
+
         response: Response = client.get(
             f"/players/search", params={"keyword": search_keyword}
         )

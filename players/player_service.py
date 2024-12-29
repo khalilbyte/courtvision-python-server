@@ -8,9 +8,11 @@ from dateutil import parser
 from fastapi import HTTPException, status
 from nba_api.stats.endpoints.commonplayerinfo import CommonPlayerInfo
 from nba_api.stats.endpoints.commonteamroster import CommonTeamRoster
+from nba_api.stats.endpoints.leagueleaders import LeagueLeaders
 from nba_api.stats.static.players import find_players_by_full_name, get_active_players
 from nba_api.stats.static.teams import _find_team_name_by_id
 
+from categories import Category
 from players.player_not_found_exception import PlayerNotFoundException
 from players.player_summary import PlayerSummary
 from players.player_summary_response import PlayerSummaryResponse
@@ -147,6 +149,59 @@ async def get_all_player_ids() -> List[int]:
         raise
     except Exception as e:
         raise RuntimeError(f"Failed to fetch player IDs: {str(e)}")
+
+
+async def get_leaders(number_of_players: int, category: Category) -> List[List]:
+    if number_of_players <= 0:
+        number_of_players = 5
+
+    if number_of_players > 10:
+        number_of_players = 10
+
+    category_leaders = LeagueLeaders(
+        per_mode48="PerGame", stat_category_abbreviation=category.value
+    )
+
+    loop = asyncio.get_running_loop()
+    with executor as thread_pool:
+        try:
+            category_leaders_dict: Dict = await loop.run_in_executor(
+                executor=thread_pool, func=category_leaders.get_dict
+            )
+            return category_leaders_dict["resultSet"]["rowSet"][:number_of_players]
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to fetch players: {str(e)}",
+            )
+
+
+# async def create_player_fantasy_profile(player_data: List):
+#     try:
+#         player_id: int = player_data[0]
+#         rank: int = player_data[1]
+#         player_name = player_data[2]
+#         team_id: int = player_data[3]
+#         last_name = name_parts[1] if len(name_parts) > 1 else ""
+
+#         return PlayerSummary(
+#             player_id=player_data[14],
+#             first_name=first_name,
+#             last_name=last_name,
+#             birth_date=parser.parse(player_data[10]).strftime("%Y-%m-%dT%H:%M:%S"),
+#             height=player_data[8],
+#             weight=player_data[9],
+#             season_exp=0 if player_data[12] == "R" else int(player_data[12]),
+#             jersey=player_data[2],
+#             position=player_data[7],
+#             team_id=player_data[0],
+#             team_city=team_data["city"],
+#             team_name=team_data["nickname"],
+#         )
+#     except (IndexError, KeyError) as e:
+#         raise ValueError(f"Invalid player data format: {str(e)}")
+#     except ValueError as e:
+#         raise ValueError(f"Error processing player data: {str(e)}")
 
 
 async def create_player_summary_from_search_result(

@@ -1,31 +1,45 @@
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime
-from typing import List
+from typing import Dict, List
 
-from dateutil import parser
-from nba_api.stats.static.players import find_players_by_full_name, get_active_players
+from fastapi import HTTPException, status
+from nba_api.stats.endpoints import LeagueLeaders
+
+from categories import Category
 
 executor: ThreadPoolExecutor = ThreadPoolExecutor()
 
 
-async def get_all_player_ids() -> List[int]:
-    loop: asyncio.AbstractEventLoop = asyncio.get_running_loop()
-    active_nba_players: List[dict] = await loop.run_in_executor(
-        executor, get_active_players
+async def get_category_leaders(
+    number_of_players: int, category: Category
+) -> List[List]:
+    if number_of_players <= 0:
+        number_of_players = 5
+
+    if number_of_players > 10:
+        number_of_players = 10
+
+    category_leaders = LeagueLeaders(
+        per_mode48="PerGame", stat_category_abbreviation=category.value
     )
-    print(len(active_nba_players))
-    return [player["id"] for player in active_nba_players]
+
+    loop = asyncio.get_running_loop()
+    with executor as thread_pool:
+        try:
+            category_leaders_dict: Dict = await loop.run_in_executor(
+                executor=thread_pool, func=category_leaders.get_dict
+            )
+            return category_leaders_dict["resultSet"]["rowSet"][:number_of_players]
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to fetch players: {str(e)}",
+            )
 
 
-player_date: str = "JUN 19, 2003"
-player_date_datetime: datetime = parser.parse(player_date)
-# print(player_date_datetime)
-
-
-print(find_players_by_full_name("ff434345$$$"))
-# players = []
-# for player in find_players_by_full_name("mitch"):
-#     if player["is_active"] == True:
-#         players.append(player)
-# print(players)
+print(asyncio.run(get_category_leaders(5, Category.points)))
+# print(
+#     LeagueLeaders(per_mode48="PerGame", stat_category_abbreviation="PTS").get_dict()[
+#         "resultSet"
+#     ]
+# )
