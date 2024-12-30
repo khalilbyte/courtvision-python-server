@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 
 from categories import Category
 from main import app
+from players.player_category_leader import PlayerCategoryLeader
 from players.player_summary import PlayerSummary
 
 MOCK_PLAYER_IDS = [1630173, 203500]
@@ -68,10 +69,49 @@ def mock_get_all_player_ids():
 
 
 @pytest.fixture
+def mock_create_player_category_leader():
+    async def _mock_create_player_category_leader(player_data: List):
+        return PlayerCategoryLeader(
+            player_id=player_data[0],
+            player_name=player_data[2],
+            rank=player_data[1],
+            team_id=player_data[3],
+            games_played=player_data[5],
+            minutes_played=player_data[6],
+            fgm=player_data[7],
+            fga=player_data[8],
+            fgpct=player_data[9],
+            fg3m=player_data[10],
+            fg3a=player_data[11],
+            fg3_pct=player_data[12],
+            ftm=player_data[13],
+            fta=player_data[14],
+            ftpct=player_data[15],
+            oreb=player_data[16],
+            dreb=player_data[17],
+            reb=player_data[18],
+            ast=player_data[19],
+            stl=player_data[20],
+            blk=player_data[21],
+            tov=player_data[22],
+            pts=player_data[23],
+            eff=player_data[24],
+        )
+
+    return _mock_create_player_category_leader
+
+
+@pytest.fixture
 def mock_get_leaders():
     async def _mock_get_leaders(
         number_of_players: int, category: Category
     ) -> List[List]:
+        # Adjust number_of_players according to service logic
+        if number_of_players <= 0:
+            number_of_players = 5
+        if number_of_players > 10:
+            number_of_players = 10
+
         MOCK_PLAYERS: List[List] = [
             [
                 203507,
@@ -128,20 +168,26 @@ def mock_get_leaders():
                 31.8,
             ],
         ]
-        return MOCK_PLAYERS
+        # Return based on adjusted number_of_players
+        return MOCK_PLAYERS[:number_of_players]
 
     return _mock_get_leaders
 
 
 # /players/categories endpoint tests
 @pytest.mark.asyncio
-async def test_get_leaders(client: TestClient, mock_get_leaders) -> None:
+async def test_get_leaders(
+    client: TestClient, mock_get_leaders, mock_create_player_category_leader
+):
     number_of_players: int = 2
     category: Category = Category.points
 
     with patch(
         "players.player_service.get_leaders",
         new=mock_get_leaders,
+    ), patch(
+        "players.player_service.create_player_category_leader",
+        new=mock_create_player_category_leader,
     ):
         response: Response = client.get(
             f"/players/categories",
@@ -149,16 +195,16 @@ async def test_get_leaders(client: TestClient, mock_get_leaders) -> None:
         )
 
         assert response.status_code == 200
-        mock_response = await mock_get_leaders(number_of_players, category)
-        data = response.json()
+        mock_data = await mock_get_leaders(number_of_players, category)
+        expected_players = [
+            await mock_create_player_category_leader(player) for player in mock_data
+        ]
+        response_data = response.json()
 
-        assert len(data) == len(mock_response)
-        assert data[0][0] == mock_response[0][0]
-        assert data[0][1] == mock_response[0][1]
-        assert data[0][2] == mock_response[0][2]
-        assert data[1][0] == mock_response[1][0]
-        assert data[1][1] == mock_response[1][1]
-        assert data[1][2] == mock_response[1][2]
+        for i, player in enumerate(response_data):
+            assert player["player_id"] == expected_players[i].player_id
+            assert player["player_name"] == expected_players[i].player_name
+            assert player["rank"] == expected_players[i].rank
 
 
 # /players/search endpoint tests

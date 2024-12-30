@@ -3,6 +3,7 @@ from typing import Any, Dict, List
 from fastapi import FastAPI, Query
 
 from categories import Category
+from players.player_category_leader import PlayerCategoryLeader
 from players.player_service import (
     create_player_summary_from_search_result,
     get_leaders,
@@ -17,10 +18,10 @@ from teams.team_service import get_all_teams, get_team_players
 app = FastAPI()
 
 
-@app.get("/players/categories", response_model=List[List])
+@app.get("/players/categories", response_model=List[PlayerCategoryLeader])
 async def get_category_leaders(
-    number_of_players: int, category: Category
-) -> List[List]:
+    number_of_players: int = Query(...), category: Category = Query(...)
+) -> List[PlayerCategoryLeader]:
     return await get_leaders(number_of_players=number_of_players, category=category)
 
 

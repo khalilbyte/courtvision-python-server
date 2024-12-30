@@ -38,8 +38,8 @@ async def get_category_leaders(
 
 
 print(asyncio.run(get_category_leaders(5, Category.points)))
-# print(
-#     LeagueLeaders(per_mode48="PerGame", stat_category_abbreviation="PTS").get_dict()[
-#         "resultSet"
-#     ]
-# )
+print(
+    LeagueLeaders(per_mode48="PerGame", stat_category_abbreviation="PTS").get_dict()[
+        "resultSet"
+    ]
+)

@@ -32,12 +32,12 @@ class PlayerCategoryLeader(BaseModel):
     @computed_field
     @property
     def conference(self) -> str:
-        return TEAMS_BY_ID.get(self.team_name, TEAMS_BY_ID[None])["conference"]
+        return TEAMS_BY_ID.get(self.team_id, TEAMS_BY_ID[None])["conference"]
 
     @computed_field
     @property
     def division(self) -> str:
-        return TEAMS_BY_ID.get(self.team_name, TEAMS_BY_ID[None])["division"]
+        return TEAMS_BY_ID.get(self.team_id, TEAMS_BY_ID[None])["division"]
 
     @computed_field
     @property

@@ -13,6 +13,7 @@ from nba_api.stats.static.players import find_players_by_full_name, get_active_p
 from nba_api.stats.static.teams import _find_team_name_by_id
 
 from categories import Category
+from players.player_category_leader import PlayerCategoryLeader
 from players.player_not_found_exception import PlayerNotFoundException
 from players.player_summary import PlayerSummary
 from players.player_summary_response import PlayerSummaryResponse
@@ -151,7 +152,9 @@ async def get_all_player_ids() -> List[int]:
         raise RuntimeError(f"Failed to fetch player IDs: {str(e)}")
 
 
-async def get_leaders(number_of_players: int, category: Category) -> List[List]:
+async def get_leaders(
+    number_of_players: int, category: Category
+) -> List[PlayerCategoryLeader]:
     if number_of_players <= 0:
         number_of_players = 5
 
@@ -168,7 +171,17 @@ async def get_leaders(number_of_players: int, category: Category) -> List[List]:
             category_leaders_dict: Dict = await loop.run_in_executor(
                 executor=thread_pool, func=category_leaders.get_dict
             )
-            return category_leaders_dict["resultSet"]["rowSet"][:number_of_players]
+
+            list_of_leaders: List[List] = category_leaders_dict["resultSet"]["rowSet"][
+                :number_of_players
+            ]
+            processed_list = await asyncio.gather(
+                *(create_player_category_leader(player) for player in list_of_leaders)
+            )
+
+            return processed_list
+        except asyncio.CancelledError:
+            raise
         except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -176,32 +189,38 @@ async def get_leaders(number_of_players: int, category: Category) -> List[List]:
             )
 
 
-# async def create_player_fantasy_profile(player_data: List):
-#     try:
-#         player_id: int = player_data[0]
-#         rank: int = player_data[1]
-#         player_name = player_data[2]
-#         team_id: int = player_data[3]
-#         last_name = name_parts[1] if len(name_parts) > 1 else ""
-
-#         return PlayerSummary(
-#             player_id=player_data[14],
-#             first_name=first_name,
-#             last_name=last_name,
-#             birth_date=parser.parse(player_data[10]).strftime("%Y-%m-%dT%H:%M:%S"),
-#             height=player_data[8],
-#             weight=player_data[9],
-#             season_exp=0 if player_data[12] == "R" else int(player_data[12]),
-#             jersey=player_data[2],
-#             position=player_data[7],
-#             team_id=player_data[0],
-#             team_city=team_data["city"],
-#             team_name=team_data["nickname"],
-#         )
-#     except (IndexError, KeyError) as e:
-#         raise ValueError(f"Invalid player data format: {str(e)}")
-#     except ValueError as e:
-#         raise ValueError(f"Error processing player data: {str(e)}")
+async def create_player_category_leader(player_data: List):
+    try:
+        return PlayerCategoryLeader(
+            player_id=player_data[0],
+            player_name=player_data[2],
+            rank=player_data[1],
+            team_id=player_data[3],
+            games_played=player_data[5],
+            minutes_played=player_data[6],
+            fgm=player_data[7],
+            fga=player_data[8],
+            fgpct=player_data[9],
+            fg3m=player_data[10],
+            fg3a=player_data[11],
+            fg3_pct=player_data[12],
+            ftm=player_data[13],
+            fta=player_data[14],
+            ftpct=player_data[15],
+            oreb=player_data[16],
+            dreb=player_data[17],
+            reb=player_data[18],
+            ast=player_data[19],
+            stl=player_data[20],
+            blk=player_data[21],
+            tov=player_data[22],
+            pts=player_data[23],
+            eff=player_data[24],
+        )
+    except (IndexError, KeyError) as e:
+        raise ValueError(f"Invalid player data format: {str(e)}")
+    except ValueError as e:
+        raise ValueError(f"Error processing player data: {str(e)}")
 
 
 async def create_player_summary_from_search_result(

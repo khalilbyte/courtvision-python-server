@@ -1,12 +1,9 @@
 from enum import Enum
 
-Category = Enum(
-    "Category",
-    [
-        ("points", "PTS"),
-        ("rebounds", "REB"),
-        ("assists", "AST"),
-        ("blocks", "BLK"),
-        ("steals", "STL"),
-    ],
-)
+
+class Category(str, Enum):
+    points = "PTS"
+    rebounds = "REB"
+    assists = "AST"
+    blocks = "BLK"
+    steals = "STL"
