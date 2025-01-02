@@ -2,6 +2,7 @@ from typing import Any, Dict, List
 
 from fastapi import FastAPI, Query
 
+from cache.cache import cache_response
 from categories import Category
 from players.player_category_leader import PlayerCategoryLeader
 from players.player_service import (
@@ -19,6 +20,7 @@ app = FastAPI()
 
 
 @app.get("/players/categories", response_model=List[PlayerCategoryLeader])
+@cache_response(expire_time_seconds=86400)
 async def get_category_leaders(
     number_of_players: int = Query(...), category: Category = Query(...)
 ) -> List[PlayerCategoryLeader]:
@@ -36,15 +38,18 @@ async def get_player_by_id(player_id: int) -> PlayerSummary:
 
 
 @app.get("/players", response_model=PlayerSummaryResponse)
+@cache_response(expire_time_seconds=604800)
 async def get_all_players(page: int = 1, players_per_page: int = 10) -> Dict[str, Any]:
     return await get_paginated_players(page, players_per_page)
 
 
 @app.get("/teams/{team_id}/players", response_model=List[PlayerSummary])
+@cache_response(expire_time_seconds=604800)
 async def get_players_by_team(team_id: int) -> List[PlayerSummary]:
     return await get_team_players(team_id)
 
 
 @app.get("/teams", response_model=List[Team])
+@cache_response(expire_time_seconds=1200000)
 async def get_teams() -> List[Team]:
     return await get_all_teams()
