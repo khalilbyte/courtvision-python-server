@@ -12,13 +12,13 @@ class PlayerCategoryLeader(BaseModel):
     minutes_played: float = 0
     fgm: float = 0
     fga: float = 0
-    fgpct: float = 0
+    fg_pct: float = 0
     fg3m: float = 0
     fg3a: float = 0
     fg3_pct: float = 0
     ftm: float = 0
     fta: float = 0
-    ftpct: float = 0
+    ft_pct: float = 0
     oreb: float = 0
     dreb: float = 0
     reb: float = 0
