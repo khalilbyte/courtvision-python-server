@@ -1,19 +1,21 @@
 # CourtVision
 
-The NBA regular season is spans across 7 months and over 1200 games. For NBA Fantasy team owners, this means staying on top of your game day-in and day-out. CourtVision gives you an all-in-one place to keep up-to-date with players on your teams.
+The NBA regular season spans across 7 months and over 1200 games. For NBA Fantasy team owners, this means staying on top of your game day-in and day-out. CourtVision gives you an all-in-one place to keep up-to-date with players on your teams.
 
 ## Table of Contents
 
 - [Features](#features)
 - [Installation](#installation)
-- [Dependencies](#dependencies)
+- [API Documentation](#api-documentation)
+- [External API Integration](#external-api-integration)
 
 ## Features
 
 - See all players available in NBA Fantasy
 - Search for specific players
-- Add players to your watchlist
-- Create and manage custom fantasy teams
+- View category leaders (points, rebounds, assists, etc.)
+- Browse team rosters
+- Fast response times with Redis caching
 
 ## Installation
 
@@ -21,12 +23,13 @@ The NBA regular season is spans across 7 months and over 1200 games. For NBA Fan
 
 - Python 3.8 or higher
 - pip (Python package installer)
+- Redis server
 
 ### Local Setup
 
 Clone the repository:
 
-```
+```bash
 git clone https://github.com/fullstackkg/courtvision-fastapi.git
 ```
 
@@ -43,21 +46,7 @@ venv\Scripts\activate
 source venv/bin/activate
 ```
 
-Install FastAPI and the required dependencies:
-
-```
-pip install "fastapi[standard]"
-```
-
-## Core Dependencies
-
-The project uses FastAPI framework with the following key dependencies:
-
-FastAPI: Modern web framework for building APIs
-Uvicorn: Fast ASGI server
-Pydantic: Data validation using Python type annotations
-
-To install all dependencies, simply run:
+Install required dependencies:
 
 ```
 pip install -r requirements.txt
@@ -73,30 +62,24 @@ uvicorn main:app --reload
 
 Application runs on http://localhost:8000
 
-### Production Build
+## Core Dependencies
 
-Create JAR
+The project is built with modern Python tools and frameworks:
 
-```
-mvn clean package
-```
-
-Run JAR
-
-```
-java -jar target/courtvision-server-0.0.1-SNAPSHOT.jar
-```
-
-## External API Integration
-
-This project utilizes the [NBA_API](https://github.com/swar/nba_api) for retrieving NBA statistics and player data.
+FastAPI: High-performance web framework for building APIs
+Uvicorn: Lightning-fast ASGI server
+Pydantic: Data validation using Python type annotations
+Redis: In-memory caching for improved performance
+NBA_API: Python client for accessing NBA statistics
 
 ## API Documentation
 
-The API documentation is automatically generated and can be accessed at:
+Interactive API documentation is automatically generated and available at:
 
 Swagger UI: http://localhost:8000/docs
 ReDoc: http://localhost:8000/redoc
+
+### Available Endpoints
 
 #### Players
 
@@ -109,3 +92,7 @@ ReDoc: http://localhost:8000/redoc
 
 - GET /teams - List all teams
 - GET /teams/{team_id}/players - Get all players on a team
+
+## External API Integration
+
+This project utilizes the [NBA_API](https://github.com/swar/nba_api) for retrieving NBA statistics and player data.
