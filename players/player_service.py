@@ -226,6 +226,13 @@ async def create_player_category_leader(player_data: List):
 async def create_player_summary_from_search_result(
     keyword: str,
 ) -> List[PlayerSummary]:
+    keywordCopy: str = str.strip(keyword)
+    if keywordCopy == "" or keywordCopy.isalpha() == False or len(keywordCopy) < 3:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Value must be minimum 3 letters",
+        )
+
     player_list: List[Dict] = search_players(keyword=keyword)
     filtered_player_list: List[Dict] = filter_active_players(players_list=player_list)
 

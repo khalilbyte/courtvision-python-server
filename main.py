@@ -28,6 +28,7 @@ async def get_category_leaders(
 
 
 @app.get("/players/search", response_model=List[PlayerSummary])
+@cache_response(expire_time_seconds=604800)
 async def get_players_by_search(keyword: str = Query(...)):
     return await create_player_summary_from_search_result(keyword)
 
