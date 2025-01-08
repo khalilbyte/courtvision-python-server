@@ -139,17 +139,6 @@ async def get_paginated_players(
     )
 
 
-async def get_all_player_ids() -> List[int]:
-    try:
-        loop: asyncio.AbstractEventLoop = asyncio.get_running_loop()
-        active_nba_players: List[Dict] = await loop.run_in_executor(
-            executor, get_active_players
-        )
-        return [player["id"] for player in active_nba_players]
-    except asyncio.CancelledError:
-        raise
-    except Exception as e:
-        raise RuntimeError(f"Failed to fetch player IDs: {str(e)}")
 
 
 async def get_leaders(
@@ -328,3 +317,18 @@ async def create_player_summary(player_data: List, team_data: Dict) -> PlayerSum
         raise ValueError(f"Invalid player data format: {str(e)}")
     except ValueError as e:
         raise ValueError(f"Error processing player data: {str(e)}")
+
+# Utility Functions
+async def 
+
+async def get_all_player_ids() -> List[int]:
+    try:
+        loop: asyncio.AbstractEventLoop = asyncio.get_running_loop()
+        active_nba_players: List[Dict] = await loop.run_in_executor(
+            executor, get_active_players
+        )
+        return [player["id"] for player in active_nba_players]
+    except asyncio.CancelledError:
+        raise
+    except Exception as e:
+        raise RuntimeError(f"Failed to fetch player IDs: {str(e)}")
