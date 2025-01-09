@@ -3,7 +3,7 @@ from pydantic import BaseModel
 # nba_api/stats/endpoints/playerprofilev2.py
 
 
-class PlayerStats(BaseModel):
+class PlayerAverages(BaseModel):
     player_id: int = 0
     season_id: str | None = None
     team_id: int = 0

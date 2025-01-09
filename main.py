@@ -4,12 +4,14 @@ from fastapi import FastAPI, Query
 
 from cache.cache import cache_response
 from categories import Category
+from players.player_averages import PlayerAverages
 from players.player_category_leader import PlayerCategoryLeader
 from players.player_service import (
     create_player_summary_from_search_result,
     get_leaders,
     get_paginated_players,
     get_player,
+    get_player_averages,
 )
 from players.player_summary import PlayerSummary
 from players.player_summary_response import PlayerSummaryResponse
@@ -33,7 +35,16 @@ async def get_players_by_search(keyword: str = Query(...)):
     return await create_player_summary_from_search_result(keyword)
 
 
+@app.get("/players/{player_id}/career-averages", response_model=List[PlayerAverages])
+@cache_response(expire_time_seconds=604800)
+async def get_player_career_averages(
+    player_id: int, per_mode="PerGame"
+) -> List[PlayerAverages]:
+    return await get_player_averages(player_id=player_id, per_mode=per_mode)
+
+
 @app.get("/players/{player_id}", response_model=PlayerSummary)
+@cache_response(expire_time_seconds=604800)
 async def get_player_by_id(player_id: int) -> PlayerSummary:
     return await get_player(player_id)
 

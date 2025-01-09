@@ -1,5 +1,5 @@
 from typing import Any, Dict, List
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from fastapi import Response
@@ -7,7 +7,9 @@ from fastapi.testclient import TestClient
 
 from categories import Category
 from main import app
+from players.player_averages import PlayerAverages
 from players.player_category_leader import PlayerCategoryLeader
+from players.player_not_found_exception import PlayerNotFoundException
 from players.player_summary import PlayerSummary
 
 MOCK_PLAYER_IDS = [1630173, 203500]
@@ -172,7 +174,9 @@ def mock_get_leaders():
     return _mock_get_leaders
 
 
-# /players/categories endpoint tests
+######################################
+# /players/categories endpoint tests #
+######################################
 @pytest.mark.asyncio
 async def test_get_leaders(
     client: TestClient, mock_get_leaders, mock_create_player_category_leader
@@ -198,7 +202,9 @@ async def test_get_leaders(
         assert len(response_data) == 2
 
 
-# /players/search endpoint tests
+##################################
+# /players/search endpoint tests #
+##################################
 @pytest.mark.asyncio
 async def test_get_players_by_search(client: TestClient, mock_get_player_info) -> None:
     search_keyword = "Precious"
@@ -229,7 +235,9 @@ async def test_get_players_by_search(client: TestClient, mock_get_player_info) -
         assert data[0]["last_name"] == "Achiuwa"
 
 
-# /players/{player_id} endpoint tests
+#######################################
+# /players/{player_id} endpoint tests #
+#######################################
 @pytest.mark.asyncio
 async def test_get_player_by_id(client: TestClient, mock_get_player_info) -> None:
     with patch("players.player_service.get_player_info", new=mock_get_player_info):
@@ -257,7 +265,9 @@ async def test_get_player_by_id_not_found(
         assert "not found" in data["detail"].lower()
 
 
-# /players endpoint tests
+###########################
+# /players endpoint tests #
+###########################
 @pytest.mark.asyncio
 async def test_get_all_players(
     client: TestClient, mock_get_all_player_ids, mock_get_player_info
@@ -364,3 +374,8 @@ async def test_last_page_indicators(
         assert data["previous_page"] == 1
         assert data["next_page"] is None
         assert data["is_last_page"]
+
+
+########################################
+# /players/{player_id}/career-averages #
+########################################

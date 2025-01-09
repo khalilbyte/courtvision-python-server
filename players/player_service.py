@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 from math import ceil
@@ -9,10 +10,16 @@ from fastapi import HTTPException, status
 from nba_api.stats.endpoints.commonplayerinfo import CommonPlayerInfo
 from nba_api.stats.endpoints.commonteamroster import CommonTeamRoster
 from nba_api.stats.endpoints.leagueleaders import LeagueLeaders
-from nba_api.stats.static.players import find_players_by_full_name, get_active_players
+from nba_api.stats.endpoints.playerprofilev2 import PlayerProfileV2
+from nba_api.stats.static.players import (
+    find_player_by_id,
+    find_players_by_full_name,
+    get_active_players,
+)
 from nba_api.stats.static.teams import _find_team_name_by_id
 
 from categories import Category
+from players.player_averages import PlayerAverages
 from players.player_category_leader import PlayerCategoryLeader
 from players.player_not_found_exception import PlayerNotFoundException
 from players.player_summary import PlayerSummary
@@ -76,6 +83,76 @@ async def get_player_info(player_id: int) -> PlayerSummary:
         raise RuntimeError(f"Failed to fetch player {player_id}: {str(e)}")
 
 
+async def get_player_averages(player_id: int, per_mode="PerGame") -> Dict:
+    is_valid = is_player_id_valid(player_id)
+    if not is_valid:
+        raise PlayerNotFoundException("Player stats cannot be found at this time")
+
+    loop: asyncio.AbstractEventLoop = asyncio.get_event_loop()
+    player_career_averages_list: List[PlayerAverages] = []
+
+    try:
+        player_profile_instance = await loop.run_in_executor(
+            None, PlayerProfileV2, player_id, per_mode
+        )
+
+        player_profile = await loop.run_in_executor(
+            None, player_profile_instance.get_dict
+        )
+
+        # Fetch career averages data
+        player_career_averages: Dict = player_profile["resultSets"][0]["rowSet"]
+
+        # Process each season's stats
+        for player_stats in player_career_averages:
+            player_averages_single_season = PlayerAverages(
+                player_id=player_stats[0],
+                season_id=player_stats[1],
+                team_id=player_stats[3],
+                team_abbreviation=player_stats[4],
+                player_age=player_stats[5],
+                gp=player_stats[6],
+                gs=player_stats[7],
+                min=player_stats[8],
+                fgm=player_stats[9],
+                fga=player_stats[10],
+                fg_pct=player_stats[11],
+                fg3m=player_stats[12],
+                fg3a=player_stats[13],
+                fg3_pct=player_stats[14],
+                ftm=player_stats[15],
+                fta=player_stats[16],
+                ft_pct=player_stats[17],
+                oreb=player_stats[18],
+                dreb=player_stats[19],
+                reb=player_stats[20],
+                ast=player_stats[21],
+                stl=player_stats[22],
+                blk=player_stats[23],
+                tov=player_stats[24],
+                pf=player_stats[25],
+                pts=player_stats[26],
+            )
+            player_career_averages_list.append(player_averages_single_season)
+    except asyncio.CancelledError:
+        # Re-raise CancelledError to maintain proper async behavior
+        raise
+
+    except TimeoutError as e:
+        logging.error(f"Request timed out while waiting for player data: {str(e)}")
+        raise TimeoutError(f"Request for player data took too long: {str(e)}")
+
+    except (IndexError, KeyError) as e:
+        logging.error(f"Invalid player stats format: {str(e)}")
+        raise ValueError(f"Invalid player stats format: {str(e)}")
+
+    except Exception as e:
+        logging.error(f"An unexpected error occurred: {str(e)}")
+        raise
+
+    return player_career_averages_list
+
+
 # Player List/Search Functions
 async def get_paginated_players(
     page: int = 1, players_per_page: int = 10
@@ -137,8 +214,6 @@ async def get_paginated_players(
         is_last_page=is_last_page,
         total_players=total_players,
     )
-
-
 
 
 async def get_leaders(
@@ -244,22 +319,6 @@ async def create_player_summary_from_search_result(
         )
 
 
-def search_players(keyword: str) -> List[Dict]:
-    return find_players_by_full_name(keyword)
-
-
-def filter_active_players(players_list: List[Dict]) -> List:
-    if players_list is None or len(players_list) == 0:
-        return []
-
-    active_players: List[Dict] = []
-    for player in players_list:
-        if player["is_active"]:
-            active_players.append(player)
-
-    return active_players
-
-
 # Team Player Functions
 async def get_all_team_players(team_id: int) -> List[PlayerSummary]:
     try:
@@ -318,8 +377,22 @@ async def create_player_summary(player_data: List, team_data: Dict) -> PlayerSum
     except ValueError as e:
         raise ValueError(f"Error processing player data: {str(e)}")
 
+
 # Utility Functions
-async def 
+def is_player_id_valid(player_id: int) -> bool:
+    if not isinstance(player_id, int):
+        raise TypeError("The player_id argument must be an integer")
+
+    try:
+        player = find_player_by_id(player_id=player_id)
+        if player is None:
+            return False
+        else:
+            return True
+    except Exception as e:
+        logging.error(f"An unexpected error occurred: {str(e)}")
+        return False
+
 
 async def get_all_player_ids() -> List[int]:
     try:
@@ -332,3 +405,19 @@ async def get_all_player_ids() -> List[int]:
         raise
     except Exception as e:
         raise RuntimeError(f"Failed to fetch player IDs: {str(e)}")
+
+
+def search_players(keyword: str) -> List[Dict]:
+    return find_players_by_full_name(keyword)
+
+
+def filter_active_players(players_list: List[Dict]) -> List:
+    if players_list is None or len(players_list) == 0:
+        return []
+
+    active_players: List[Dict] = []
+    for player in players_list:
+        if player["is_active"]:
+            active_players.append(player)
+
+    return active_players
