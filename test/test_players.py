@@ -10,6 +10,7 @@ from main import app
 from players.player_averages import PlayerAverages
 from players.player_category_leader import PlayerCategoryLeader
 from players.player_not_found_exception import PlayerNotFoundException
+from players.player_service import get_career_averages, is_player_id_valid
 from players.player_summary import PlayerSummary
 
 MOCK_PLAYER_IDS = [1630173, 203500]
@@ -379,3 +380,41 @@ async def test_last_page_indicators(
 ########################################
 # /players/{player_id}/career-averages #
 ########################################
+
+
+@pytest.mark.asyncio
+async def test_get_player_career_averages() -> None:
+    """
+    This test will test the behaviour of grabbing a players career averages by season
+    """
+
+    # Arrange
+    # A player ID
+    player_id: int = 203078  # Bradley Beal
+
+    # Act
+    player_career_averages: List[PlayerAverages] = await get_career_averages(
+        player_id=player_id
+    )
+
+    # Assert
+    assert len(player_career_averages) == 13
+    assert all(
+        isinstance(averages, PlayerAverages) for averages in player_career_averages
+    )
+
+
+@pytest.mark.asyncio
+async def test_get_player_career_averages_invalid_id(client: TestClient) -> None:
+    # Arrange
+    # Invalid player ID to test
+    player_id: int = 13211432422
+
+    # Act
+    # Call this endpoint and with invalid ID
+    response: Response = client.get(f"/players/{player_id}/career-averages")
+
+    # Assert
+    # Make sure we receive back an empty list
+    assert response.status_code == 200
+    assert response.json() == []

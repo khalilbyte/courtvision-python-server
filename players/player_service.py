@@ -83,74 +83,118 @@ async def get_player_info(player_id: int) -> PlayerSummary:
         raise RuntimeError(f"Failed to fetch player {player_id}: {str(e)}")
 
 
-async def get_player_averages(player_id: int, per_mode="PerGame") -> Dict:
-    is_valid = is_player_id_valid(player_id)
-    if not is_valid:
-        raise PlayerNotFoundException("Player stats cannot be found at this time")
+"""
+This function is responsible for getting a player's career averages by season. It takes
+in a player ID that must first be confirmed it belongs to a player. If the inputted player ID
+doesn't belong to a player, it will return an empty list. If it does belong to a player, it 
+returns a list of PlayerAverages objects.
+"""
 
+
+async def get_career_averages(player_id: int) -> List[PlayerAverages]:
+    # PlayerAverages maps to the data provided by the PlayerProfileV2 class
+
+    # This argument allows us to retrieve the stats in a per game format
+    per_mode: str = "PerGame"
+
+    # If the player ID is invalid return an empty list
+    isValid: bool = is_player_id_valid(player_id=player_id)
+    if not isValid:
+        return []
+
+    # If the player ID is valid
+    # Create something to hold all the player's career season averages
+    career_season_averages: List[LeagueLeaders] = []
+
+    # The constructor PlayerProfileV2() makes a synchronous API call, we need to make sure we make it asynchronous
+    # Create an asynchronous event loop
     loop: asyncio.AbstractEventLoop = asyncio.get_event_loop()
-    player_career_averages_list: List[PlayerAverages] = []
 
     try:
-        player_profile_instance = await loop.run_in_executor(
-            None, PlayerProfileV2, player_id, per_mode
+        # Grab the instance of the player profile asynchronously (switched from run_in_exectuor() because harder to test manual event loop management)
+        player_profile: PlayerProfileV2 = await asyncio.to_thread(
+            PlayerProfileV2, player_id=player_id, per_mode36=per_mode
         )
-
-        player_profile = await loop.run_in_executor(
-            None, player_profile_instance.get_dict
-        )
-
-        # Fetch career averages data
-        player_career_averages: Dict = player_profile["resultSets"][0]["rowSet"]
-
-        # Process each season's stats
-        for player_stats in player_career_averages:
-            player_averages_single_season = PlayerAverages(
-                player_id=player_stats[0],
-                season_id=player_stats[1],
-                team_id=player_stats[3],
-                team_abbreviation=player_stats[4],
-                player_age=player_stats[5],
-                gp=player_stats[6],
-                gs=player_stats[7],
-                min=player_stats[8],
-                fgm=player_stats[9],
-                fga=player_stats[10],
-                fg_pct=player_stats[11],
-                fg3m=player_stats[12],
-                fg3a=player_stats[13],
-                fg3_pct=player_stats[14],
-                ftm=player_stats[15],
-                fta=player_stats[16],
-                ft_pct=player_stats[17],
-                oreb=player_stats[18],
-                dreb=player_stats[19],
-                reb=player_stats[20],
-                ast=player_stats[21],
-                stl=player_stats[22],
-                blk=player_stats[23],
-                tov=player_stats[24],
-                pf=player_stats[25],
-                pts=player_stats[26],
+        # Store the player's career averages of every season
+        season_averages: List[List] = player_profile.season_totals_regular_season.data[
+            "data"
+        ]
+        # For every season, store those season numbers
+        for season in season_averages:
+            # Store season averages inside an instance of a PlayerAverages class
+            (
+                player_id,
+                season_id,
+                _,
+                team_id,
+                team_abbreviation,
+                player_age,
+                gp,
+                gs,
+                minutes,
+                fgm,
+                fga,
+                fg_pct,
+                fg3m,
+                fg3a,
+                fg3_pct,
+                ftm,
+                fta,
+                ft_pct,
+                oreb,
+                dreb,
+                reb,
+                ast,
+                stl,
+                blk,
+                tov,
+                pf,
+                pts,
+            ) = season
+            averages_for_season: PlayerAverages = PlayerAverages(
+                player_id=player_id,
+                season_id=season_id,
+                team_id=team_id,
+                team_abbreviation=team_abbreviation,
+                player_age=player_age,
+                gp=gp,
+                gs=gs,
+                minutes=minutes,
+                fgm=fgm,
+                fga=fga,
+                fg_pct=fg_pct,
+                fg3m=fg3m,
+                fg3a=fg3a,
+                fg3_pct=fg3_pct,
+                ftm=ftm,
+                fta=fta,
+                ft_pct=ft_pct,
+                oreb=oreb,
+                dreb=dreb,
+                reb=reb,
+                ast=ast,
+                stl=stl,
+                blk=blk,
+                tov=tov,
+                pf=pf,
+                pts=pts,
             )
-            player_career_averages_list.append(player_averages_single_season)
-    except asyncio.CancelledError:
-        # Re-raise CancelledError to maintain proper async behavior
-        raise
-
-    except TimeoutError as e:
-        logging.error(f"Request timed out while waiting for player data: {str(e)}")
-        raise TimeoutError(f"Request for player data took too long: {str(e)}")
-
-    except (IndexError, KeyError) as e:
-        logging.error(f"Invalid player stats format: {str(e)}")
-        raise ValueError(f"Invalid player stats format: {str(e)}")
-
+            # Store the instance
+            career_season_averages.append(averages_for_season)
+        # Return the object holding all of the player's career averages by season
+        return career_season_averages
+    except ConnectionError as ce:
+        # Handle connection problems
+        print("A connection error occured: ", ce)
+        return []
+    except TimeoutError as t:
+        # Handle timeout
+        print("A timeout error occured: ", t)
+        return []
     except Exception as e:
-        logging.error(f"An unexpected error occurred: {str(e)}")
-        raise
-
-    return player_career_averages_list
+        # Handle other request-related errors
+        print("An error occured: ", e)
+        return []
 
 
 # Player List/Search Functions

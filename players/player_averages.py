@@ -11,7 +11,7 @@ class PlayerAverages(BaseModel):
     player_age: int = 0
     gp: int = 0
     gs: int = 0
-    min: float = 0.0
+    minutes: float = 0.0
     fgm: float = 0.0
     fga: float = 0.0
     fg_pct: float = 0.0

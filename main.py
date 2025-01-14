@@ -8,10 +8,10 @@ from players.player_averages import PlayerAverages
 from players.player_category_leader import PlayerCategoryLeader
 from players.player_service import (
     create_player_summary_from_search_result,
+    get_career_averages,
     get_leaders,
     get_paginated_players,
     get_player,
-    get_player_averages,
 )
 from players.player_summary import PlayerSummary
 from players.player_summary_response import PlayerSummaryResponse
@@ -40,7 +40,7 @@ async def get_players_by_search(keyword: str = Query(...)):
 async def get_player_career_averages(
     player_id: int, per_mode="PerGame"
 ) -> List[PlayerAverages]:
-    return await get_player_averages(player_id=player_id, per_mode=per_mode)
+    return await get_career_averages(player_id=player_id)
 
 
 @app.get("/players/{player_id}", response_model=PlayerSummary)
